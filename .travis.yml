@@ -11,8 +11,9 @@ before_script:
   
 install:
   - npm install 
+  - npm install -g hexo-cli
 script:
-  - npm run build
+  - hexo generate
 after_script: 
   - cd ./public
   - git init
