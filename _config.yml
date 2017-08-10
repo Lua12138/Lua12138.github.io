@@ -7,7 +7,7 @@ title: Pansy
 subtitle: The more you knwo, The less you undertand
 description: A personal site
 author: forDream
-language: ZH-CN
+language: zh-Hans
 timezone: UTF+8
 
 # URL
@@ -74,7 +74,7 @@ pagination_dir: page
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: alphadust
+theme: alpha-dust
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
