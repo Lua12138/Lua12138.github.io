@@ -5,7 +5,7 @@
 # Site
 title: Pansy
 subtitle: The more you knwo, The less you undertand
-description:
+description: A personal site
 author: forDream
 language: ZH-CN
 timezone: UTF+8
@@ -14,7 +14,7 @@ timezone: UTF+8
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
 url: https://gam2046.github.io
 root: /
-permalink: :year/:month/:day/:title/
+permalink: :category/:title/
 permalink_defaults:
 
 # Directory
@@ -53,8 +53,10 @@ index_generator:
   order_by: -date
   
 # Category & Tag
-default_category: uncategorized
+default_category: unclassified
 category_map:
+  编程: programming
+  未分类: unclassified
 tag_map:
 
 # Date / Time format
