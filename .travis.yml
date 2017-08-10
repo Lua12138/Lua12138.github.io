@@ -7,7 +7,7 @@ cache:
     - node_modules 
 
 before_script:
-  - git clone --branch hexo https://github.com/gam2046/gam2046.github.io.git public
+  - git clone --branch master https://github.com/gam2046/gam2046.github.io.git public
   
 install:
   - npm install 
