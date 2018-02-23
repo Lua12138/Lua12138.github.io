@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>PopSystem</title>
+
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+        crossorigin="anonymous">
+    <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
+        crossorigin="anonymous">
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://dbushell.com/Pikaday/css/pikaday.css">
+    <script src="https://cdn.bootcss.com/moment.js/2.20.1/moment.min.js"></script>
+    <script src="https://cdn.bootcss.com/moment.js/2.20.1/locale/zh-cn.js"></script>
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://cdn.bootcss.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <div class="row">
+        <div class="col-md-5"></div>
+        <div class="col-md-1">
+            <label>选择日期:</label>
+        </div>
+        <div class="col-md-1">
+            <input type="text" id="datepicker">
+        </div>
+        <div class="col-md-5"></div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-striped table-bordered table-hover">
+                <tr>
+                    <th>店铺编号</th>
+                    <th>店名</th>
+                    <th>纬度</th>
+                    <th>经度</th>
+                    <th>位置</th>
+                    <th>门头</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://dbushell.com/Pikaday/pikaday.js"></script>
+    <script>
+        (function () {
+            function createTr(shopNumber,
+                shopName,
+                lon,
+                lat,
+                location,
+                photo) {
+
+                function createTd(innerText) {
+                    var td = document.createElement("td");
+                    if (innerText) {
+                        td.innerText = innerText
+                    }
+                    return td;
+                }
+
+                var table = document.getElementsByClassName("table")[0]
+
+                var tr = document.createElement("tr");
+
+                tr.appendChild(createTd(shopNumber));
+                tr.appendChild(createTd(shopName));
+                tr.appendChild(createTd(lon));
+                tr.appendChild(createTd(lat));
+                tr.appendChild(createTd(location));
+
+                var tdImg = createTd();
+                var img = document.createElement("a");
+                img.href = photo;
+                img.target = 'view_window'
+                img.innerText = "查看原图";
+                tdImg.appendChild(img);
+                tr.appendChild(tdImg);
+
+                table.appendChild(tr);
+            }
+
+
+            (function () {
+                var id = 35665
+                // var date = date.format;
+
+                var picker = new Pikaday({
+                    field: document.getElementById('datepicker'),
+                    firstDay: 1,
+                    format: 'YYYY-MM-DD',
+                    minDate: new Date(),
+                    maxDate: new Date(2020, 12, 31),
+                    yearRange: [2000, 2020],
+                    onSelect: function () {
+                        var id = 35665;
+                        var dt = this.getMoment().format('YYYY-MM-DD');
+                        console.log(dt);
+
+                        // request http proxy
+                        // https://popsystem.pansy.pw/?uid=1&date=2018-02-23
+                        var xmlhttp = new XMLHttpRequest();
+                        xmlhttp.onreadystatechange = function () {
+                            if (xmlhttp.readyState == 4) {
+                                if (xmlhttp.status == 200) {
+                                    // var json = eval('(' + xmlhttp.responseText + ')');
+                                    var json = JSON.parse(xmlhttp.responseText);
+                                    console.log(json);
+
+                                    var pop = json.value.POP;
+                                    for (index in pop) {
+                                        var item = pop[index];
+                                        createTr(
+                                            item[0],
+                                            item[1],
+                                            item[5],
+                                            item[4],
+                                            item[3],
+                                            'https://www.thepopsystem.com' + item[2]
+                                        )
+                                    }
+                                } else {
+                                    alert("查询失败");
+                                }
+                            }
+                        }
+                        var requestUrl = "https://popsystem.pansy.pw/?uid=" + id + "&date=" + dt;
+                        console.log("Request url", requestUrl);
+                        xmlhttp.open("GET", requestUrl, true);
+                        xmlhttp.send();
+
+                        document.getElementById('datepicker').hidden = 'hidden';
+                    }
+                });
+            })();
+        })();
+    </script>
+</body>
+
+</html>
