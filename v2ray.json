@@ -1,4 +1,7 @@
 {
+  "log": {
+    "loglevel": "info"
+  },
   "inbound": {
     "port": 2046,
     "listen":"0.0.0.0",
