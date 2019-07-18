@@ -1,28 +1,81 @@
 {
-  "log": {
-    "loglevel": "info"
-  },
-  "inbound": {
-    "port": 2046,
-    "listen":"0.0.0.0",
-    "protocol": "vmess",
-    "settings": {
-      "clients": [
-        {
-          "id": "b831381d-6324-4d53-ad4f-8cda48b30811",
-          "alterId": 64
-        }
-      ]
+    "log": {
+        "logLevel": "error"
     },
-    "streamSettings": {
-      "network": "ws",
-      "wsSettings": {
-      "path": "/ray"
-      }
+    "inbounds": [
+        {
+            "port": 2046,
+            "listen": "0.0.0.0",
+            "protocol": "vmess",
+            "tag": "inputWebSocket",
+            "streamSettings": {
+                "network": "ws"
+            },
+            "settings": {
+                "clients": [
+                    {
+                        "id": "b831381d-6324-4d53-ad4f-8cda48b30811",
+                        "alterId": 64
+                    }
+                ],
+                "disableInsecureEncryption": true
+            }
+        },
+        {
+            "port": 2047,
+            "listen": "0.0.0.0",
+            "protocol": "vmess",
+            "tag": "inputTcpHttp",
+            "streamSettings": {
+                "network": "tcp"
+            },
+            "settings": {
+                "clients": [
+                    {
+                        "id": "b831381d-6324-4d53-ad4f-8cda48b30811",
+                        "alterId": 64
+                    }
+                ],
+                "disableInsecureEncryption": true
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom"
+        }
+    ],
+    "transport": {
+        "wsSettings": {
+            "path": "/ray"
+        }
+    },
+    "tcpSettings": {
+        "type": "http",
+        "response": {
+            "version": "1.1",
+            "status": "200",
+            "reason": "OK",
+            "headers": {
+                "Content-Type": [
+                    "application/octet-stream",
+                    "video/mpeg",
+                    "image/jpeg",
+                    "image/png",
+                    "audio/mpeg",
+                    "audio/ogg",
+                    "audio/*",
+                    "video/mp4",
+                    "application/*"
+                ],
+                "Transfer-Encoding": [
+                    "chunked"
+                ],
+                "Connection": [
+                    "keep-alive"
+                ],
+                "Pragma": "no-cache"
+            }
+        }
     }
-  },
-  "outbound": {
-    "protocol": "freedom",
-    "settings": {}
-  }
 }
