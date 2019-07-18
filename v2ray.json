@@ -48,33 +48,33 @@
     "transport": {
         "wsSettings": {
             "path": "/ray"
-        }
-    },
-    "tcpSettings": {
-        "type": "http",
-        "response": {
-            "version": "1.1",
-            "status": "200",
-            "reason": "OK",
-            "headers": {
-                "Content-Type": [
-                    "application/octet-stream",
-                    "video/mpeg",
-                    "image/jpeg",
-                    "image/png",
-                    "audio/mpeg",
-                    "audio/ogg",
-                    "audio/*",
-                    "video/mp4",
-                    "application/*"
-                ],
-                "Transfer-Encoding": [
-                    "chunked"
-                ],
-                "Connection": [
-                    "keep-alive"
-                ],
-                "Pragma": "no-cache"
+        },
+        "tcpSettings": {
+            "type": "http",
+            "response": {
+                "version": "1.1",
+                "status": "200",
+                "reason": "OK",
+                "headers": {
+                    "Content-Type": [
+                        "application/octet-stream",
+                        "video/mpeg",
+                        "image/jpeg",
+                        "image/png",
+                        "audio/mpeg",
+                        "audio/ogg",
+                        "audio/*",
+                        "video/mp4",
+                        "application/*"
+                    ],
+                    "Transfer-Encoding": [
+                        "chunked"
+                    ],
+                    "Connection": [
+                        "keep-alive"
+                    ],
+                    "Pragma": "no-cache"
+                }
             }
         }
     }
