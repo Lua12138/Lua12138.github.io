@@ -2,6 +2,19 @@
     "log": {
         "logLevel": "error"
     },
+    "api": {
+        "tag": "outApi",
+        "services": [
+            "HandlerService",
+            "LoggerService",
+            "StatsService"
+        ]
+    },
+    "dns": {},
+    "routing": {},
+    "stats": {},
+    "policy": {},
+    "reverse": {},
     "inbounds": [
         {
             "port": 2046,
@@ -63,16 +76,10 @@
                         "image/png",
                         "audio/mpeg",
                         "audio/ogg",
-                        "audio/*",
-                        "video/mp4",
-                        "application/*"
+                        "video/mp4"
                     ],
-                    "Transfer-Encoding": [
-                        "chunked"
-                    ],
-                    "Connection": [
-                        "keep-alive"
-                    ],
+                    "Transfer-Encoding": "chunked",
+                    "Connection": "keep-alive",
                     "Pragma": "no-cache"
                 }
             }
