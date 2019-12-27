@@ -1,0 +1,424 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Device Development Remote Debug Page</title>
+    <script>
+        let socket = undefined
+        let nodeInfo = undefined
+        let canvasMovePoint = {
+            x: 0,
+            y: 0
+        }
+        let autoUpdateIntervalId = undefined
+        /**
+         * 代码模板
+         */
+        const codeTemplate = [
+            {
+                id: 'sys_update_node_info',
+                description: '更新节点信息',
+                showInMenu: false,
+                code: `const stack = new java.util.Stack()
+const topNode = automation.getRootInActiveWindow()
+const nodes = {}
+stack.push(topNode)
+
+while (!stack.empty()) {
+    var node = stack.pop()
+    for (var n = 0; n < node.getChildCount(); n++) {
+        stack.push(node.getChild(n))
+    }
+
+    var nodeInfo = {
+        nodeId: node.getSourceNodeId(),
+        parentNodeId: node.getParentNodeId(),
+        className: node.getClassName(),
+        resourceIdName: node.getViewIdResourceName(),
+        text: node.getText(),
+        description: node.getContentDescription(),
+        hint: node.getHintText(),
+        bunds: node.getBoundsInScreen(),
+        packageName:node.getPackageName()
+    }
+    nodes[nodeInfo.nodeId] = nodeInfo
+}
+const data = { 'nodes': task.jsonStringify(nodes),'action':'Nodes' }
+task.exit(0, 'test', data)
+`
+            }, {
+                id: 'script_item_single_tap',
+                description: '单击此元素',
+                showInMenu: true,
+                code: `task.exit(0,'test',{})`
+            }, {
+                id: 'script_item_double_tap',
+                description: '双击此元素',
+                showInMenu: true,
+                code: `task.exit(0,'test',{})`
+            }, {
+                id: 'script_item_long_tap',
+                description: '长按此元素',
+                showInMenu: true,
+                code: `task.exit(0,'test',{})`
+            }, {
+                id: 'script_item_input_text',
+                description: '在此元素中输入文字',
+                showInMenu: true,
+                code: `task.exit(0,'test',{})`
+            }, {
+                id: 'script_item_await_until',
+                description: '等待直到出现此元素',
+                showInMenu: true,
+                code: `task.exit(0,'test',{})`
+            }, {
+                id: 'local_item_copy_resource_id_name',
+                description: '* 复制此元素ID名称',
+                showInMenu: true,
+                code: ''
+            }
+        ]
+
+        function onScreenCap(code, data) {
+            const canvas = document.getElementById('imgScreen')
+            const rectCanvas = document.getElementById('imgRect')
+            const ctx = canvas.getContext('2d')
+            if (code == 0) {
+                const screenImage = new Image()
+                screenImage.onload = () => {
+                    canvas.width = rectCanvas.width = screenImage.width
+                    canvas.height = rectCanvas.height = screenImage.height
+                    ctx.drawImage(screenImage, 0, 0)
+                }
+                screenImage.setAttribute('src', `data:image/png;base64,${data}`)
+            } else {
+                console.log('Screencap error')
+                alert(`获取设备屏幕信息失败:${code}`)
+            }
+        }
+
+        function onRun(code, data) {
+            if (code == 0) {
+                if (data.nodes) {
+                    nodeInfo = JSON.parse(data.nodes)
+                }
+                console.log('node info', nodeInfo)
+
+            } else {
+                console.log('run js error', code)
+            }
+        }
+
+        const onSocketError = function (event) {
+            console.log('error', event)
+            alert('与设备通讯失败，请检查设备IP地址正确后，刷新页面重新连接')
+        }
+
+        const onSocketMessage = function (event) {
+            console.log('message', event)
+            const json = JSON.parse(event.data)
+            if (json.originAction == 'screencap') {
+                onScreenCap(json.code, json.message)
+            } else if (json.originAction == 'run') {
+                onRun(json.code, json.message)
+            } else if (json.originAction == 'force-stop') {
+                alert('设备环境已经强制终止')
+            }
+        }
+
+        const onSocketOpen = function (event) {
+            console.log('open', event)
+            screenCap()
+            updateNodeInfo()
+        }
+
+        const onSocketClose = function (event) {
+            console.log('close', event)
+            alert('设备连接中断，请刷新页面后重新连接')
+            location.reload(true)
+        }
+        function enableAutoUpdateNode() {
+            if (autoUpdateIntervalId == undefined) {
+                autoUpdateIntervalId = window.setInterval(() => { screenCap(); updateNodeInfo() }, 2500)
+            } else {
+                console.log('has been enable auto update node info')
+            }
+        }
+
+        function disableAtuoUpdateNode() {
+            if (autoUpdateIntervalId == undefined) {
+                console.log('has been disabled auto update node info')
+            } else {
+                window.clearInterval(autoUpdateIntervalId)
+                autoUpdateIntervalId = undefined
+            }
+        }
+        function copyToClipboard(id, value) {
+            const element = document.getElementById(id)
+            if (id == 'textClipboard') {
+                element.value = value
+            }
+            element.select()
+            document.execCommand('copy', false, null)
+        }
+
+        function queryNodeByPosition(x, y) {
+            if (nodeInfo == undefined) {
+                return null
+            }
+
+            const tmp = new Map()
+            for (var id in nodeInfo) {
+                const node = nodeInfo[id]
+                const nodeBounds = node.bunds
+                if (x >= nodeBounds.left &&
+                    x <= nodeBounds.right &&
+                    y >= nodeBounds.top &&
+                    y <= nodeBounds.bottom) {
+                    tmp.set(Number(id), node)
+                }
+            }
+
+            let times = 20
+            while (tmp.size > 1 && times-- > 0) {
+                for (var [id, node] of tmp) {
+                    tmp.delete(node.parentNodeId)
+                }
+            }
+
+            if (tmp.size > 1) {
+                let minId = null
+                let minTimes = 999999999
+                for (var [id, node] of tmp) {
+                    times = (node.bunds.right - node.bunds.left) * (node.bunds.bottom - node.bunds.top)
+                    if (times < minTimes) {
+                        minTimes = times
+                        minId = id
+                    }
+                }
+
+                const bingo = tmp.get(minId)
+                console.log('match node error more', tmp.size, tmp, 'bingo', bingo)
+                return bingo
+            }
+
+            return tmp.values().next().value
+        }
+
+        function onCanvasMouseMove(e) {
+            const canvas = document.getElementById('imgRect')
+            const ctx = canvas.getContext('2d')
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            ctx.strokeStyle = '#FF0000'
+            ctx.lineWidth = 5
+
+            canvasMovePoint.x = e.offsetX
+            canvasMovePoint.y = e.offsetY
+            const node = queryNodeByPosition(e.offsetX, e.offsetY)
+
+            // 检索元素信息
+            if (node != null) {
+                ctx.strokeRect(node.bunds.left, node.bunds.top, node.bunds.right - node.bunds.left, node.bunds.bottom - node.bunds.top)
+                document.getElementById('nodeId').value = node.nodeId
+                document.getElementById('nodeClassName').value = node.className
+                document.getElementById('nodeResourceId').value = node.resourceIdName
+                document.getElementById('nodeText').value = node.text
+                document.getElementById('nodeDescription').value = node.description
+                document.getElementById('nodeHint').value = node.hint
+                document.getElementById('nodePackageName').value = node.packageName
+            }
+        }
+
+        function onMenuShow(x, y) {
+            const menu = document.getElementById('rightClickMenu')
+            menu.innerHTML = ''
+            menu.style.display = 'block'
+            menu.style.left = `${x}px`
+            menu.style.top = `${y}px`
+
+            codeTemplate.forEach((item, index, arr) => {
+                if (item.showInMenu) {
+                    const li = document.createElement('li')
+                    li.innerText = item.description
+                    if (item.id == 'local_item_copy_resource_id_name') {
+                        // 特殊处理
+                        li.addEventListener('click', () => { copyToClipboard('nodeResourceId') })
+                    } else if (item.id.startsWith('script_')) {
+                        li.addEventListener('click', () => { runJavascript(item.code) })
+                    } else if (item.id.startsWith('local_')) {
+                        li.addEventListener('click', () => eval())
+                    }
+                    li.addEventListener('click', onMenuHidden)
+
+                    menu.appendChild(li)
+                }
+            })
+        }
+
+        function onMenuHidden() {
+            const menu = document.getElementById('rightClickMenu')
+            menu.style.display = 'none'
+        }
+        function onCanvasKeydown(event) {
+            if (event.ctrlKey) {
+                switch (event.keyCode) {
+                    case 67: // c
+                        copyToClipboard('textClipboard', `${canvasMovePoint.x}, ${canvasMovePoint.y}`)
+                        break;
+                    case 88: // x
+                        copyToClipboard('nodeResourceId')
+                        break;
+                    case 17: break;
+                    default:
+                        console.log('keydown', event)
+                }
+            }
+        }
+        function onCanvasMenu(event) {
+            const e = event || window.event
+            onMenuShow(e.offsetX, e.offsetY)
+            return false
+        }
+        function saveInputValue(idOrElement) {
+            if (typeof idOrElement == 'string') {
+                localStorage.setItem(idOrElement, document.getElementById(idOrElement).value)
+            } else {
+                localStorage.setItem(idOrElement.id, idOrElement.value)
+            }
+        }
+        function socketSend(data) {
+            if (socket == undefined) {
+                console.log('connect must before send')
+            } else {
+                socket.send(JSON.stringify(data))
+            }
+        }
+        function connect() {
+            const address = document.getElementById('deviceAddress').value
+            if (socket == undefined) {
+                localStorage.setItem('deviceAddress', address)
+                socket = new WebSocket(`ws://${address}:29876`)
+                socket.addEventListener('error', onSocketError)
+                socket.addEventListener('message', onSocketMessage)
+                socket.addEventListener('open', onSocketOpen)
+                socket.addEventListener('close', onSocketClose)
+            } else {
+                console.log('ws has been connected')
+            }
+        }
+
+        function runJavascript(remoteScript) {
+            const element = document.getElementById('textScript')
+            const script = remoteScript || element.value
+            saveInputValue(element)
+            socketSend({ action: 'run', message: script })
+        }
+
+        function screenCap() {
+            socketSend({ action: 'screencap' })
+        }
+
+        function updateNodeInfo() {
+            const item = codeTemplate.find(item => item.id == 'sys_update_node_info')
+            socketSend({ action: 'run', message: item.code })
+        }
+
+        function forceStopRemoteEnvirmonent() {
+            socketSend({ action: 'force-stop' })
+        }
+
+        window.onload = function () {
+            const canvas = document.getElementById('imgRect')
+            canvas.addEventListener('mousemove', onCanvasMouseMove)
+            canvas.oncontextmenu = onCanvasMenu
+            canvas.addEventListener('click', onMenuHidden)
+            document.addEventListener('keydown', onCanvasKeydown)
+
+            document.getElementById('chkAutoUpdateNode').addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    enableAutoUpdateNode()
+                } else {
+                    disableAtuoUpdateNode()
+                }
+            })
+            // 载入默认值
+            const inputs = document.getElementsByTagName('input')
+            for (var input of inputs) {
+                input.value = localStorage.getItem(input.id)
+            }
+        }
+    </script>
+    <style>
+        .rightClickMenu {
+            width: 150px;
+            background-color: #fff000;
+            font-size: 12px;
+            position: absolute;
+            text-align: left;
+            padding: 2px 0;
+            border: 1px solid #ccc000;
+            display: none;
+            z-index: 100;
+        }
+
+        .rightClickMenu li {
+            list-style: none;
+            line-height: 20px;
+            padding-left: 25px;
+        }
+
+        .rightClickMenu li:hover {
+            background-color: #dcdcdc;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<!-- 截图显示区域/横竖屏会自行变化 -->
+<div style="position: relative;">
+    <div style="position: absolute; top: 0px; left: 0px;"> <canvas id="imgRect"></canvas> </div>
+    <div><canvas id="imgScreen"></canvas></div>
+</div>
+
+<br>
+<!-- 当前选中节点信息 -->
+<div>
+    <label for="nodePackageName">所属应用:</label> <input id="nodePackageName" name="nodePackageName"
+        readonly="readonly" /><br>
+    <label for="nodeId">当前节点ID:</label> <input id="nodeId" name="nodeId" readonly="readonly" /><br>
+    <label for="nodeClassName">当前节点类:</label> <input id="nodeClassName" name="nodeClassName" readonly="readonly" /><br>
+    <label for="nodeResourceId">当前节点资源ID:</label> <input id="nodeResourceId" name="nodeResourceId"
+        readonly="readonly" /><br>
+    <label for="nodeText">当前节点文本:</label> <input id="nodeText" name="nodeText" readonly="readonly" /><br>
+    <label for="nodeDescription">当前节点描述文本:</label> <input id="nodeDescription" name="nodeDescription"
+        readonly="readonly" /><br>
+    <label for="nodeHint">当前节点提示文本:</label> <input id="nodeHint" name="nodeHint" readonly="readonly" /><br>
+    复制文本暂用: <input type="text" id="textClipboard" readonly="readonly" />
+</div>
+<br>
+<!-- 代码调试区域 -->
+<textarea id="textScript" rows="50" cols="100" wrap="hard"></textarea>
+<!-- 连接参数区域 -->
+<div>
+    <label for="deviceAddress">请确保手机与当前计算机处于同一个局域网中/并输入手机IP地址:</label>
+    <input name="deviceAddress" id="deviceAddress" />
+    <button onclick="javascript:connect()">Connect to Device</button>
+    自动刷新UI:<input type="checkbox" id="chkAutoUpdateNode" disabled="disabled" />
+</div>
+<!-- 控制区域 -->
+<!-- <button onclick="javascript:screenCap()">Screen cap</button> -->
+<button onclick="javascript:screenCap();updateNodeInfo()">Update Node Info</button>
+<button onclick="javascript:forceStopRemoteEnvirmonent()">Force Stop Remote Envirmonent</button>
+<button onclick="javascript:runJavascript()">Have a try</button>
+<!-- 操作提示 -->
+<p>操作快捷键</p>
+<ul>
+    <li>Ctrl + X : 复制选择元素的资源ID名称</li>
+    <li>Ctrl + C : 复制当前鼠标悬停的坐标位置</li>
+</ul>
+<!-- 右键菜单 -->
+<ul id="rightClickMenu" class="rightClickMenu">
+</ul>
+
+</html>
