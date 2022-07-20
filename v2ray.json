@@ -55,7 +55,14 @@
     ],
     "outbounds": [
         {
-            "protocol": "freedom"
+            "address": "127.0.0.1",
+            "port": 65432,
+            "users": [
+                {
+                    "user": "",
+                    "pass": ""
+                }
+            ]
         }
     ],
     "transport": {
