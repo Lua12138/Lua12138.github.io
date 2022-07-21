@@ -56,8 +56,10 @@
     "outbounds": [
         {
             "protocol": "socks5",
-            "address": "127.0.0.1",
-            "port": 65432
+            "settings":{
+                "address": "127.0.0.1",
+                "port": 65432
+            }
         }
     ],
     "transport": {
